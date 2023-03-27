@@ -4,16 +4,21 @@ import com.baomidou.mybatisplus.annotation.*;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
+import com.baomidou.mybatisplus.extension.handlers.GsonTypeHandler;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.neutron.usermatchbackend.handler.StringListTypeHandler;
 import lombok.Data;
+import org.apache.ibatis.type.ArrayTypeHandler;
+import org.apache.ibatis.type.StringTypeHandler;
 
 /**
  * 用户表
  * @author zzs
  * @TableName user
  */
-@TableName(value ="user")
+@TableName(value ="user", autoResultMap = true)
 @Data
 public class User implements Serializable {
     /**
@@ -80,14 +85,15 @@ public class User implements Serializable {
     private Integer isDelete;
 
     /**
+     * 标签 json 列表
+     */
+    @TableField(value = "tags", typeHandler = StringListTypeHandler.class)
+    private List<String> tags;
+
+    /**
      * 用户角色 0 - 普通用户 1 - 管理员
      */
     private Integer userRole;
-
-    /**
-     * 公司编号
-     */
-    private String userCode;
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;

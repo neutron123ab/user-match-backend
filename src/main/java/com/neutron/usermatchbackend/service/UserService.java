@@ -7,6 +7,7 @@ import com.neutron.usermatchbackend.model.request.UserLoginRequest;
 import com.neutron.usermatchbackend.model.request.UserRegisterRequest;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
 * @author zzs
@@ -39,4 +40,20 @@ public interface UserService extends IService<User> {
      * @return 用户脱敏信息
      */
     UserDTO getSafetyUser(User user);
+
+    /**
+     * 判断是否为管理员
+     *
+     * @param request 请求
+     * @return  true：是管理员
+     */
+    boolean isAdmin(HttpServletRequest request);
+
+    /**
+     * 根据标签名查找用户
+     *
+     * @param tags 标签列表
+     * @return 用户列表
+     */
+    List<UserDTO> searchUsersByTags(List<String> tags);
 }

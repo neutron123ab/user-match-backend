@@ -1,8 +1,12 @@
 package com.neutron.usermatchbackend.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.date.DateTime;
+import cn.hutool.core.date.StopWatch;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.crypto.SecureUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.neutron.usermatchbackend.common.ErrorCode;
 import com.neutron.usermatchbackend.exception.BusinessException;
@@ -16,8 +20,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static com.neutron.usermatchbackend.constant.UserConstant.*;
 
@@ -54,11 +60,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
                 || checkPassword.length() < USER_PASSWORD_MIN_LEN){
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户密码过短");
         }
-        //4.公司编号1-5位
-        String userCode = userRegisterRequest.getUserCode();
-        if(userCode.length() < USER_CODE_MIN_LEN || userCode.length() > USER_CODE_MAX_LEN){
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户公司编号长度不在区间[1, 5]内");
-        }
         //6.账号不能包含特殊字符
         Pattern pattern = Pattern.compile(VALID_PATTERN);
         Matcher matcher = pattern.matcher(userRegisterRequest.getUserAccount());
@@ -74,11 +75,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if(count > 0){
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "该账户已存在");
         }
-        //9.查数据库，公司编号不能重复
-        Long codeCount = query().eq("user_code", userCode).count();
-        if(codeCount > 0){
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "该公司编号已存在");
-        }
         //10.密码加密
         String encodedPassword = SecureUtil.md5(userPassword + SALT);
         //11.插入数据库
@@ -86,7 +82,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         user.setUsername("user_"+ IdUtil.simpleUUID());
         user.setUserAccount(userAccount);
         user.setUserPassword(encodedPassword);
-        user.setUserCode(userCode);
         boolean save = save(user);
         if(!save){
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "插入数据库失败");
@@ -143,6 +138,39 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         BeanUtil.copyProperties(user, userDTO);
         return userDTO;
     }
+
+    @Override
+    public boolean isAdmin(HttpServletRequest request) {
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        UserDTO userInfo = (UserDTO) userObj;
+        return userInfo != null && userInfo.getUserRole() == ADMIN_ROLE;
+    }
+
+    @Override
+    public List<UserDTO> searchUsersByTags(List<String> tags) {
+
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        for(String tag : tags) {
+            queryWrapper.like("tags", tag);
+        }
+        List<User> userList = list(queryWrapper);
+
+        return userList.stream().map(this::getSafetyUser).collect(Collectors.toList());
+    }
+
+   // public List<UserDTO> searchUsersByTags(List<String> tags) {
+
+//        if(CollUtil.isEmpty(tags)) {
+//            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+//        }
+//        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+//        queryWrapper.select("username", "tags");
+//        List<User> userList = list(queryWrapper);
+//        userList.stream().filter(user -> {
+//
+//        })
+//
+//    }
 
 
 }

@@ -1,6 +1,8 @@
 server:
     port: 8081
 spring:
+    profiles:
+        active: dev
     application:
         name: user-center-backend
     datasource:
@@ -8,6 +10,13 @@ spring:
         password: '137911'
         url: jdbc:mysql://localhost:3306/user_center?serverTimezone=UTC
         username: 'root'
+    session:
+        store-type: redis
+        timeout: 86400
+    redis:
+        database: 0
+        host: localhost
+        port: 6379
 
 mybatis-plus:
     global-config:
@@ -17,3 +26,6 @@ mybatis-plus:
             logic-not-delete-value: 0 # 逻辑未删除值(默认为 0)
     configuration:
         map-underscore-to-camel-case: true
+        log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    type-handlers-package: com.neutron.usermatchbackend.handler
+

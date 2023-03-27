@@ -1,6 +1,8 @@
 package com.neutron.usermatchbackend.controller;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.neutron.usermatchbackend.common.BaseResponse;
@@ -12,6 +14,7 @@ import com.neutron.usermatchbackend.model.entity.User;
 import com.neutron.usermatchbackend.model.request.UserLoginRequest;
 import com.neutron.usermatchbackend.model.request.UserRegisterRequest;
 import com.neutron.usermatchbackend.service.UserService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -20,13 +23,13 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.neutron.usermatchbackend.constant.UserConstant.ADMIN_ROLE;
 import static com.neutron.usermatchbackend.constant.UserConstant.USER_LOGIN_STATE;
 
 /**
  * @author zzs
  * @date 2023/3/21 15:58
  */
+@Slf4j
 @RestController
 @RequestMapping("/user")
 @CrossOrigin
@@ -74,7 +77,7 @@ public class UserController {
 
     @GetMapping("/search")
     public BaseResponse<List<UserDTO>> searchUsers(String username, HttpServletRequest request) {
-        if(!isAdmin(request)) {
+        if(!userService.isAdmin(request)) {
             throw new BusinessException(ErrorCode.NO_AUTH);
         }
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
@@ -89,7 +92,7 @@ public class UserController {
 
     @PostMapping("/delete")
     public BaseResponse<Boolean> deleteUser(@RequestBody long id, HttpServletRequest request) {
-        if(!isAdmin(request)) {
+        if(!userService.isAdmin(request)) {
             throw new BusinessException(ErrorCode.NO_AUTH);
         }
         if(id <= 0) {
@@ -99,17 +102,15 @@ public class UserController {
         return ResultUtils.success(flag);
     }
 
-    /**
-     * 判断是否为管理员
-     *
-     * @param request 请求
-     * @return  true：是管理员
-     */
-    private boolean isAdmin(HttpServletRequest request) {
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        UserDTO userInfo = (UserDTO) userObj;
-        return userInfo != null && userInfo.getUserRole() == ADMIN_ROLE;
+    @GetMapping("/search/tags")
+    public BaseResponse<List<UserDTO>> searchUsersByTags(@RequestParam(required = false) List<String> tags){
+        if(CollUtil.isEmpty(tags)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数列表不能为空");
+        }
+        long start = System.currentTimeMillis();
+        List<UserDTO> userList = userService.searchUsersByTags(tags);
+        long end = System.currentTimeMillis();
+        log.info("time = " + (end - start));
+        return ResultUtils.success(userList);
     }
-
-
 }
