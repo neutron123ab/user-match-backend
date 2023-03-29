@@ -120,42 +120,41 @@ create table user_team
 
 #### 增加了mybatis数据类型转换器
 
-由于user表中保存了关于标签的json列表数据，所以我们每次取数据的时候都要多写一段反序列化的代码，为了增加复用，我自定义了一个`json转List<String>`的`TypeHandler`并将其以注解的形式定义在实体类的json字段上（要在配置文件中注册这个`TypeHandler`），之后每次取数据的时候，它都会自动帮我把json数据以`List<String>`的形式注入到tags字段中。
+由于user表中保存了关于标签的json列表数据，所以我们每次取数据的时候都要多写一段反序列化的代码，为了增加复用，我自定义了一个`json转Set<String>`的`TypeHandler`并将其以注解的形式定义在实体类的json字段上（要在配置文件中注册这个`TypeHandler`），之后每次取数据的时候，它都会自动帮我把json数据以`Set<String>`的形式注入到tags字段中。
 
-**json与List\<String>的类型转换器**
+**json与Set\<String>的类型转换器**
 
 继承BaseTypeHandler类，重写其中的四个方法，把json序列化和反序列化的操作放到了这里面。
 
 ```java
-public class StringListTypeHandler extends BaseTypeHandler<List<String>> {
+public class StringSetTypeHandler extends BaseTypeHandler<Set<String>> {
 
     @Override
-    public void setNonNullParameter(PreparedStatement preparedStatement, int i, List<String> strings, JdbcType jdbcType) throws SQLException {
+    public void setNonNullParameter(PreparedStatement preparedStatement, int i, Set<String> strings, JdbcType jdbcType) throws SQLException {
         Gson gson = new Gson();
-        //将List集合序列化，存入preparedStatement中
         String content = CollectionUtils.isEmpty(strings) ? null : gson.toJson(strings);
         preparedStatement.setString(i, content);
     }
-	//后面三个方法都是将json数据反序列化
+
     @Override
-    public List<String> getNullableResult(ResultSet resultSet, String s) throws SQLException {
+    public Set<String> getNullableResult(ResultSet resultSet, String s) throws SQLException {
         Gson gson = new Gson();
         String string = resultSet.getString(s);
-        return StringUtils.isBlank(string) ? new ArrayList<>() : gson.fromJson(string, new TypeToken<List<String>>() {}.getType());
+        return StringUtils.isBlank(string) ? new HashSet<>() : gson.fromJson(string, new TypeToken<Set<String>>() {}.getType());
     }
 
     @Override
-    public List<String> getNullableResult(ResultSet resultSet, int i) throws SQLException {
+    public Set<String> getNullableResult(ResultSet resultSet, int i) throws SQLException {
         Gson gson = new Gson();
         String string = resultSet.getString(i);
-        return StringUtils.isBlank(string) ? new ArrayList<>() : gson.fromJson(string, new TypeToken<List<String>>() {}.getType());
+        return StringUtils.isBlank(string) ? new HashSet<>() : gson.fromJson(string, new TypeToken<Set<String>>() {}.getType());
     }
 
     @Override
-    public List<String> getNullableResult(CallableStatement callableStatement, int i) throws SQLException {
+    public Set<String> getNullableResult(CallableStatement callableStatement, int i) throws SQLException {
         Gson gson = new Gson();
         String string = callableStatement.getString(i);
-        return StringUtils.isBlank(string) ? new ArrayList<>() : gson.fromJson(string, new TypeToken<List<String>>() {}.getType());
+        return StringUtils.isBlank(string) ? new HashSet<>() : gson.fromJson(string, new TypeToken<Set<String>>() {}.getType());
     }
 }
 ```
@@ -171,8 +170,8 @@ mybatis-plus:
 最后再实体类的tags字段上标注`TypeHandler`即可
 
 ```java
-@TableField(value = "tags", typeHandler = StringListTypeHandler.class)
-private List<String> tags;
+@TableField(value = "tags", typeHandler = StringSetTypeHandler.class)
+private Set<String> tags;
 ```
 
 
