@@ -4,21 +4,18 @@ import com.baomidou.mybatisplus.annotation.*;
 
 import java.io.Serializable;
 import java.util.Date;
-import java.util.List;
+import java.util.Set;
 
-import com.baomidou.mybatisplus.extension.handlers.GsonTypeHandler;
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.neutron.usermatchbackend.handler.StringListTypeHandler;
+import com.neutron.usermatchbackend.handler.StringSetTypeHandler;
 import lombok.Data;
-import org.apache.ibatis.type.ArrayTypeHandler;
-import org.apache.ibatis.type.StringTypeHandler;
 
 /**
  * 用户表
  * @author zzs
  * @TableName user
  */
-@TableName(value ="user", autoResultMap = true)
+@TableName(value ="user")
 @Data
 public class User implements Serializable {
     /**
@@ -87,8 +84,8 @@ public class User implements Serializable {
     /**
      * 标签 json 列表
      */
-    @TableField(value = "tags", typeHandler = StringListTypeHandler.class)
-    private List<String> tags;
+    @TableField(value = "tags", typeHandler = StringSetTypeHandler.class)
+    private Set<String> tags;
 
     /**
      * 用户角色 0 - 普通用户 1 - 管理员

@@ -2,8 +2,6 @@ package com.neutron.usermatchbackend.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.date.DateTime;
-import cn.hutool.core.date.StopWatch;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -20,7 +18,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -146,31 +147,38 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return userInfo != null && userInfo.getUserRole() == ADMIN_ROLE;
     }
 
+//    @Override
+//    public List<UserDTO> searchUsersByTags(List<String> tags) {
+//
+//        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+//        for(String tag : tags) {
+//            queryWrapper.like("tags", tag);
+//        }
+//        List<User> userList = list(queryWrapper);
+//
+//        return userList.stream().map(this::getSafetyUser).collect(Collectors.toList());
+//    }
+
     @Override
     public List<UserDTO> searchUsersByTags(List<String> tags) {
 
-        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        for(String tag : tags) {
-            queryWrapper.like("tags", tag);
+        if(CollUtil.isEmpty(tags)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.select("username", "tags");
         List<User> userList = list(queryWrapper);
-
-        return userList.stream().map(this::getSafetyUser).collect(Collectors.toList());
+        return userList.stream().filter(user -> {
+            Set<String> userTags = user.getTags();
+            userTags = Optional.ofNullable(userTags).orElse(new HashSet<>());
+            for (String tag : tags) {
+                if (!userTags.contains(tag)) {
+                    return false;
+                }
+            }
+            return true;
+        }).map(this::getSafetyUser).collect(Collectors.toList());
     }
-
-   // public List<UserDTO> searchUsersByTags(List<String> tags) {
-
-//        if(CollUtil.isEmpty(tags)) {
-//            throw new BusinessException(ErrorCode.PARAMS_ERROR);
-//        }
-//        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-//        queryWrapper.select("username", "tags");
-//        List<User> userList = list(queryWrapper);
-//        userList.stream().filter(user -> {
-//
-//        })
-//
-//    }
 
 
 }

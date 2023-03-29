@@ -118,11 +118,119 @@ create table user_team
 1. 通过 sql 在数据库中查找，直接得到结果
 2. 内存查找
 
+#### 增加了mybatis数据类型转换器
+
+由于user表中保存了关于标签的json列表数据，所以我们每次取数据的时候都要多写一段反序列化的代码，为了增加复用，我自定义了一个`json转List<String>`的`TypeHandler`并将其以注解的形式定义在实体类的json字段上（要在配置文件中注册这个`TypeHandler`），之后每次取数据的时候，它都会自动帮我把json数据以`List<String>`的形式注入到tags字段中。
+
+**json与List\<String>的类型转换器**
+
+继承BaseTypeHandler类，重写其中的四个方法，把json序列化和反序列化的操作放到了这里面。
+
+```java
+public class StringListTypeHandler extends BaseTypeHandler<List<String>> {
+
+    @Override
+    public void setNonNullParameter(PreparedStatement preparedStatement, int i, List<String> strings, JdbcType jdbcType) throws SQLException {
+        Gson gson = new Gson();
+        //将List集合序列化，存入preparedStatement中
+        String content = CollectionUtils.isEmpty(strings) ? null : gson.toJson(strings);
+        preparedStatement.setString(i, content);
+    }
+	//后面三个方法都是将json数据反序列化
+    @Override
+    public List<String> getNullableResult(ResultSet resultSet, String s) throws SQLException {
+        Gson gson = new Gson();
+        String string = resultSet.getString(s);
+        return StringUtils.isBlank(string) ? new ArrayList<>() : gson.fromJson(string, new TypeToken<List<String>>() {}.getType());
+    }
+
+    @Override
+    public List<String> getNullableResult(ResultSet resultSet, int i) throws SQLException {
+        Gson gson = new Gson();
+        String string = resultSet.getString(i);
+        return StringUtils.isBlank(string) ? new ArrayList<>() : gson.fromJson(string, new TypeToken<List<String>>() {}.getType());
+    }
+
+    @Override
+    public List<String> getNullableResult(CallableStatement callableStatement, int i) throws SQLException {
+        Gson gson = new Gson();
+        String string = callableStatement.getString(i);
+        return StringUtils.isBlank(string) ? new ArrayList<>() : gson.fromJson(string, new TypeToken<List<String>>() {}.getType());
+    }
+}
+```
+
+之后将该`TypeHandler`注册
+
+```yaml
+mybatis-plus:
+	# 扫描自定义TypeHandler所在包
+    type-handlers-package: com.neutron.usermatchbackend.handler
+```
+
+最后再实体类的tags字段上标注`TypeHandler`即可
+
+```java
+@TableField(value = "tags", typeHandler = StringListTypeHandler.class)
+private List<String> tags;
+```
 
 
 
+### 批量导入数据
 
+批量导入100万条数据
 
+1. 每次导入1条数据，导入100万次（这种方式程序执行时间过长，且由于数据量很大，程序会变得不可控）
+2. 批量导入数据，将100万条数据分成很多组，每次导入一组（我这里每组设置10000条数据）
+
+![image-20230329144851789](D:\zProject\图片\README\image-20230329144851789.png)
+
+​	用时156秒
+
+3. 通过多线程并发插入数据（我这里开了100个线程，每个线程处理10000条数据，需要配置数据库连接池的最大连接数，否则会报错）
+
+![image-20230329151817848](D:\zProject\图片\README\image-20230329151817848.png)
+
+​	耗时45秒
+
+```java
+@Slf4j
+@Component
+public class InsertUsers {
+
+    private final ExecutorService executorService = new ThreadPoolExecutor(100, 1000, 10000, TimeUnit.MINUTES, new ArrayBlockingQueue<>(10000));
+    /**
+     * 并发插入数据
+     */
+    public void insertUsersConcurrent() {
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+        int j = 0;
+        List<CompletableFuture<Void>> futureList = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            List<User> userList = new ArrayList<>();
+            while(true) {
+                j++;
+                User user = getUser();//设置要插入数据的信息
+                userList.add(user);
+                if(j % 10000 == 0) {
+                    break;
+                }
+            }
+            //异步执行
+            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                userService.saveBatch(userList, 10000);
+            }, executorService);
+            futureList.add(future);
+        }
+        CompletableFuture.allOf(futureList.toArray(new CompletableFuture[]{})).join();
+        stopWatch.stop();
+        System.out.println("execute time(concurrent): " + stopWatch.getTotalTimeMillis());
+    }
+
+}
+```
 
 
 
