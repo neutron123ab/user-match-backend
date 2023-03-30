@@ -5,8 +5,10 @@ import com.neutron.usermatchbackend.model.entity.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.neutron.usermatchbackend.model.request.UserLoginRequest;
 import com.neutron.usermatchbackend.model.request.UserRegisterRequest;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -56,4 +58,21 @@ public interface UserService extends IService<User> {
      * @return 用户列表
      */
     List<UserDTO> searchUsersByTags(List<String> tags);
+
+    /**
+     * 更新用户
+     *
+     * @param user 用户
+     * @param loginUser 登录用户
+     * @return 是否更新成功
+     */
+    boolean updateUser(User user, UserDTO loginUser);
+
+    /**
+     * 用户上传头像
+     *
+     * @param file 文件信息
+     * @return 图片url
+     */
+    String uploadAvatar(MultipartFile file);
 }

@@ -3,6 +3,7 @@ package com.neutron.usermatchbackend.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -14,10 +15,23 @@ import com.neutron.usermatchbackend.model.request.UserLoginRequest;
 import com.neutron.usermatchbackend.model.request.UserRegisterRequest;
 import com.neutron.usermatchbackend.service.UserService;
 import com.neutron.usermatchbackend.mapper.UserMapper;
+import com.qcloud.cos.COSClient;
+import com.qcloud.cos.ClientConfig;
+import com.qcloud.cos.auth.BasicSessionCredentials;
+import com.qcloud.cos.model.ObjectMetadata;
+import com.qcloud.cos.model.PutObjectRequest;
+import com.qcloud.cos.model.PutObjectResult;
+import com.qcloud.cos.region.Region;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.io.File;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +52,26 @@ import static com.neutron.usermatchbackend.constant.UserConstant.*;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         implements UserService {
 
+    @Value("${cos.secretId}")
+    private String secretId;
+
+    @Value("${cos.secretKey}")
+    private String secretKey;
+
+    @Value("${cos.token}")
+    private String token;
+
+    @Value("${cos.regionName}")
+    private String regionName;
+
+    @Value("${cos.bucketName}")
+    private String bucketName;
+
+    @Value("${cos.filePrefix}")
+    private String filePrefix;
+
+    @Resource
+    private UserMapper userMapper;
     private static final String SALT = "neutron";
 
     private static final String VALID_PATTERN = "^[a-zA-Z0-9]+$";
@@ -178,6 +212,52 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             }
             return true;
         }).map(this::getSafetyUser).collect(Collectors.toList());
+    }
+
+    @Override
+    public boolean updateUser(User user, UserDTO loginUser) {
+        Long id = user.getId();
+        if(loginUser == null || !id.equals(loginUser.getId())) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN, "用户未登录");
+        }
+        User newUser = userMapper.selectById(id);
+        if(newUser == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "请求参数为空");
+        }
+        return updateById(user);
+    }
+
+    @Override
+    public String uploadAvatar(MultipartFile file) {
+        // 1 传入获取到的临时密钥 (tmpSecretId, tmpSecretKey, sessionToken)
+        String tmpSecretId = secretId;
+        String tmpSecretKey = secretKey;
+        String sessionToken = token;
+        BasicSessionCredentials cred = new BasicSessionCredentials(tmpSecretId, tmpSecretKey, sessionToken);
+
+        Region region = new Region(regionName);
+        ClientConfig clientConfig = new ClientConfig(region);
+
+        COSClient cosClient = new COSClient(cred, clientConfig);
+
+        // 指定要上传的文件
+// 指定文件将要存放的存储桶
+// 指定文件上传到 COS 上的路径，即对象键。例如对象键为 folder/picture.jpg，则表示将文件 picture.jpg 上传到 folder 路径下
+        String key = "user-match/" + IdUtil.simpleUUID() + ".jpg";
+
+        PutObjectRequest putObjectRequest = null;
+        try {
+            ObjectMetadata objectMetadata = new ObjectMetadata();
+            objectMetadata.setSecurityToken(sessionToken);
+            putObjectRequest = new PutObjectRequest(bucketName, key, file.getInputStream(), objectMetadata);
+            cosClient.putObject(putObjectRequest);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }finally {
+            cosClient.shutdown();
+        }
+
+        return filePrefix + key;
     }
 
 

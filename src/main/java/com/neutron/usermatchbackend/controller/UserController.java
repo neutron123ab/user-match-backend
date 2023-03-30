@@ -2,7 +2,6 @@ package com.neutron.usermatchbackend.controller;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.neutron.usermatchbackend.common.BaseResponse;
@@ -16,10 +15,12 @@ import com.neutron.usermatchbackend.model.request.UserRegisterRequest;
 import com.neutron.usermatchbackend.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -112,5 +113,28 @@ public class UserController {
         long end = System.currentTimeMillis();
         log.info("time = " + (end - start));
         return ResultUtils.success(userList);
+    }
+
+    @PostMapping("/update")
+    public BaseResponse<Boolean> updateUser(@RequestBody User user, HttpServletRequest request) {
+        UserDTO loginUser = (UserDTO) request.getSession().getAttribute(USER_LOGIN_STATE);
+        if(user == null) {
+           throw new BusinessException(ErrorCode.NULL_ERROR, "请求参数为空");
+        }
+        boolean result = userService.updateUser(user, loginUser);
+        return ResultUtils.success(result);
+    }
+
+    @PostMapping("/upload/{id}")
+    public BaseResponse<String> uploadFile(@RequestParam MultipartFile file, @PathVariable Integer id) throws IOException {
+        if(file == null) {
+            return ResultUtils.error(ErrorCode.NULL_ERROR, "file为空");
+        }
+        String picUrl = userService.uploadAvatar(file);
+        boolean isUpdate = userService.update().eq("id", id).set("avatar_url", picUrl).update();
+        if(isUpdate) {
+            return ResultUtils.success(picUrl);
+        }
+        return ResultUtils.error(ErrorCode.SYSTEM_ERROR, "图片上传失败");
     }
 }
