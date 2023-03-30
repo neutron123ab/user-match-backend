@@ -1,19 +1,34 @@
-package com.neutron.usermatchbackend.once;
+package com.neutron.usermatchbackend.job;
 
+import com.neutron.usermatchbackend.model.dto.TmpSecret;
 import com.tencent.cloud.CosStsClient;
 import com.tencent.cloud.Response;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 
+import javax.annotation.Resource;
 import java.util.TreeMap;
 
-public class Demo {
+/**
+ * @author zzs
+ * @date 2023/3/30 20:09
+ */
+@Slf4j
+@Component
+public class TmpSecretIdKeyJob {
 
-    public static void main(String[] args) {
+    @Resource
+    private TmpSecret tmpSecret;
+
+    @Scheduled(fixedRate = 7200000)
+    public void upDateTmpSecretIdAndKey() {
         TreeMap<String, Object> config = new TreeMap<>();
 
         try {
             //这里的 SecretId 和 SecretKey 代表了用于申请临时密钥的永久身份（主账号、子账号等），子账号需要具有操作存储桶的权限。
             String secretId = "AKIDTmmaATI4tZCoNpOrZG1GNJ6g5UuA1gMy";
-             String secretKey ="wkYGwX2Ogms052669BnIdtyxpX5JQL4b";
+            String secretKey ="wkYGwX2Ogms052669BnIdtyxpX5JQL4b";
             // 替换为您的云 api 密钥 SecretId
             config.put("secretId", secretId);
             // 替换为您的云 api 密钥 SecretKey
@@ -40,7 +55,7 @@ public class Demo {
             // 密钥的权限列表。必须在这里指定本次临时密钥所需要的权限。
             // 简单上传、表单上传和分块上传需要以下的权限，其他权限列表请参见 https://cloud.tencent.com/document/product/436/31923
             String[] allowActions = new String[] {
-                     // 简单上传
+                    // 简单上传
                     "name/cos:PutObject",
                     // 表单上传、小程序上传
                     "name/cos:PostObject",
@@ -53,12 +68,13 @@ public class Demo {
             };
             config.put("allowActions", allowActions);
             Response response = CosStsClient.getCredential(config);
-            System.out.println(response.credentials.tmpSecretId);
-            System.out.println(response.credentials.tmpSecretKey);
-            System.out.println(response.credentials.sessionToken);
+            tmpSecret.setSecretId(response.credentials.tmpSecretId);
+            tmpSecret.setSecretKey(response.credentials.tmpSecretKey);
+            tmpSecret.setSessionToken(response.credentials.sessionToken);
         } catch (Exception e) {
             e.printStackTrace();
             throw new IllegalArgumentException("no valid secret !");
         }
     }
+
 }

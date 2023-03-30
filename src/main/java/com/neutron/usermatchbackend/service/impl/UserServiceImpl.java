@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.neutron.usermatchbackend.common.ErrorCode;
 import com.neutron.usermatchbackend.exception.BusinessException;
+import com.neutron.usermatchbackend.model.dto.TmpSecret;
 import com.neutron.usermatchbackend.model.dto.UserDTO;
 import com.neutron.usermatchbackend.model.entity.User;
 import com.neutron.usermatchbackend.model.request.UserLoginRequest;
@@ -72,6 +73,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Resource
     private UserMapper userMapper;
+
+    @Resource
+    private TmpSecret tmpSecret;
     private static final String SALT = "neutron";
 
     private static final String VALID_PATTERN = "^[a-zA-Z0-9]+$";
@@ -230,9 +234,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public String uploadAvatar(MultipartFile file) {
         // 1 传入获取到的临时密钥 (tmpSecretId, tmpSecretKey, sessionToken)
-        String tmpSecretId = secretId;
-        String tmpSecretKey = secretKey;
-        String sessionToken = token;
+        String tmpSecretId = tmpSecret.getSecretId();
+        String tmpSecretKey = tmpSecret.getSecretKey();
+        String sessionToken = tmpSecret.getSessionToken();
         BasicSessionCredentials cred = new BasicSessionCredentials(tmpSecretId, tmpSecretKey, sessionToken);
 
         Region region = new Region(regionName);
