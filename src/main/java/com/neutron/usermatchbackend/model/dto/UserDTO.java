@@ -1,10 +1,13 @@
 package com.neutron.usermatchbackend.model.dto;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.neutron.usermatchbackend.handler.StringSetTypeHandler;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.Set;
 
 /**
  * @author zzs
@@ -65,4 +68,10 @@ public class UserDTO implements Serializable {
      * 用户角色 0 - 普通用户 1 - 管理员
      */
     private Integer userRole;
+
+    /**
+     * 标签 json 列表
+     */
+    @TableField(value = "tags", typeHandler = StringSetTypeHandler.class)
+    private Set<String> tags;
 }

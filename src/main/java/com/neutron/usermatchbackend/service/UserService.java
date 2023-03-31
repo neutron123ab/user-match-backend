@@ -1,5 +1,6 @@
 package com.neutron.usermatchbackend.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.neutron.usermatchbackend.model.dto.UserDTO;
 import com.neutron.usermatchbackend.model.entity.User;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -8,7 +9,6 @@ import com.neutron.usermatchbackend.model.request.UserRegisterRequest;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -44,6 +44,14 @@ public interface UserService extends IService<User> {
     UserDTO getSafetyUser(User user);
 
     /**
+     * 用户信息脱敏
+     *
+     * @param user 用户信息
+     * @return 用户
+     */
+    User getSafetyUsers(User user);
+
+    /**
      * 判断是否为管理员
      *
      * @param request 请求
@@ -75,4 +83,14 @@ public interface UserService extends IService<User> {
      * @return 图片url
      */
     String uploadAvatar(MultipartFile file);
+
+    /**
+     * 匹配用户
+     *
+     * @param user 登录用户
+     * @param pageSize 页面大小
+     * @param currentPage 当前页
+     * @return 与用户最匹配的用户列表
+     */
+    List<UserDTO> matchUsers(UserDTO user, long pageSize, long currentPage);
 }

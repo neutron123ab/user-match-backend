@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.neutron.usermatchbackend.common.BaseResponse;
 import com.neutron.usermatchbackend.common.ErrorCode;
 import com.neutron.usermatchbackend.common.ResultUtils;
@@ -137,4 +138,41 @@ public class UserController {
         }
         return ResultUtils.error(ErrorCode.SYSTEM_ERROR, "图片上传失败");
     }
+
+    @GetMapping("/getAllUsers")
+    public BaseResponse<Page<User>> getAllUsers(long pageSize, long currentPage) {
+        Page<User> page = userService.page(new Page<>(currentPage, pageSize));
+        List<User> userList = page.getRecords().stream().map(userService::getSafetyUsers).collect(Collectors.toList());
+        Page<User> userPage = page.setRecords(userList);
+        return ResultUtils.success(userPage);
+    }
+
+    @GetMapping("/matchUser")
+    public BaseResponse<List<UserDTO>> matchUserByTags(long pageSize, long currentPage, HttpServletRequest request){
+        UserDTO user = (UserDTO) request.getSession().getAttribute(USER_LOGIN_STATE);
+        List<UserDTO> userPage = userService.matchUsers(user, pageSize, currentPage);
+        return ResultUtils.success(userPage);
+    }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

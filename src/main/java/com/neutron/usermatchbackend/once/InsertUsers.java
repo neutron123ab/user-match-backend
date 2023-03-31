@@ -46,15 +46,14 @@ public class InsertUsers {
      * 批量导入数据
      */
     public void insertUsersBatch() {
-        final int batch = 10000;
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
         List<User> userList = new ArrayList<>();
-        for (int i = 0; i < 1000000; i++) {
+        for (int i = 0; i < 100000; i++) {
             User user = getUser();
             userList.add(user);
         }
-        userService.saveBatch(userList, 10000);
+        userService.saveBatch(userList, 1000);
         stopWatch.stop();
         log.info("execute time(insert batch): {}", stopWatch.getTotalTimeMillis());
     }
