@@ -1,10 +1,7 @@
 package com.neutron.usermatchbackend.util;
 
-import cn.hutool.core.util.StrUtil;
-
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -12,6 +9,9 @@ import java.util.stream.Collectors;
  * @date 2023/3/31 16:48
  */
 public class AlgorithmUtil {
+
+    private AlgorithmUtil() {
+    }
 
     /**
      * 编辑距离算法

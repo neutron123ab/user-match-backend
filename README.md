@@ -26,8 +26,8 @@
 4. WebSocket
 5. knife4j
 6. Redisson分布式锁
-7. Easy Excel
-8. 并发
+7. 并发
+8. Spring Schedule 定时任务
 
 ## 设计
 
@@ -38,6 +38,8 @@
 ### 数据库表设计
 
 本来想要增加一张标签表，专门存储标签数据，但这样的话又要增加一张标签和用户的关联表，需要在多处联表查询。所以这里直接在用户表中增加一个字段，以 json 格式存储标签数据（使用mysql中的 json 数据类型，保存一个 json 数组）
+
+由于前端页面需要根据标签来选择数据，这里还是增加了一张标签表，但并不与用户表关联，只用与查找系统中有哪些标签，如果这个功能交给用户表完成的话，需要遍历所有用户找出不相同的标签，开销会很大。而且由于用户标签大多数情况都是不变的，所以后面可以直接在缓存中查找数据。
 
 #### 用户表
 
@@ -63,6 +65,24 @@ create table user
 )
     comment '用户表';
 ```
+
+#### 标签表
+
+```sql
+create table tags
+(
+    id          bigint auto_increment primary key,
+    tag_name    varchar(256)                       not null comment '标签名',
+    create_time datetime default CURRENT_TIMESTAMP not null comment '创建时间',
+    update_time datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    is_delete   tinyint  default 0                 not null comment '逻辑删除',
+    constraint tag_name
+        unique (tag_name)
+)
+    comment '标签表';
+```
+
+
 
 #### 队伍表
 
@@ -192,6 +212,32 @@ private Set<String> tags;
 
 根据用户表中的标签来进行匹配，这里使用的是编辑距离算法（字符串1经过多少次增删改字符操作可以变成字符串2，操作最少的用户即即为最匹配的用户）
 
+将编辑距离算法更改为如下形式：
+
+* 方法传递两个参数，一个是当前登录用户的标签列表，另一个是要比较的用户的标签列表
+* 先对两个列表排序（按首字母排序，如果首字符相同则按后面的字符排序，可以使用java8 stream的sorted方法），如果列表没有排序的话有可能出现两个用户的标签内容相同但顺序不同，结果相似度就非常低的情况
+* 比较两个列表中的字符串
+
+具体流程如下：
+
+1. 先获取表中所有的用户（只查id和tags两个字段）
+2. 用当前登录用户的tags与其它所有用户的tags比较，执行编辑距离算法，比较完成后将用户id与相似度存放到一个Pair结构中，让后将pair再存放入List集合
+3. 对上面的List结合中的所有pair以相似度大小进行排序，得到只包含用户id的list集合
+4. 根据上面的排好序的list集合去查找对应用户
+5. 获得用户信息后再根据前面得到的排好序的idList对用户进行排序，可以通过steam的skip和limit对用户进行分页操作，最后返回结果。
+
+#### 获取所有标签
+
+先从redis中取，取不到就取查数据库，再将数据加入缓存
+
+#### 用户上传标签
+
+如果用户上传的标签已存在于数据库中，则不添加。判断标签是否存在于数据库中的操作可以转到redis中进行，使用redis的set集合，如果redis中已存在该标签，就不操作数据库，否则先数据库中添加信息。因为这个数据变化不频繁，我设置过期时间为1小时
+
+#### 用户创建队伍
+
+
+
 ### 批量导入100万条数据
 
 1. 每次导入1条数据，导入100万次（这种方式程序执行时间过长，且由于数据量很大，程序会变得不可控）
@@ -244,6 +290,10 @@ public class InsertUsers {
 
 }
 ```
+
+### 性能优化
+
+
 
 
 

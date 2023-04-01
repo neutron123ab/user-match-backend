@@ -34,11 +34,6 @@ mybatis-plus:
     type-handlers-package: com.neutron.usermatchbackend.handler
 
 cos:
-    # secretId: AKIDTmmaATI4tZCoNpOrZG1GNJ6g5UuA1gMy
-    secretId: AKIDxQBro9KUtIJsThyTlh-lZU9yZc4mJFP6Eiqk808b3u14knN67wcnsOKiOE6teNhh
-    # secretKey: wkYGwX2Ogms052669BnIdtyxpX5JQL4b
-    secretKey: YViwbNn4ollbGLDLgKa5mUMkrsFP5SZtnQ6ROjyjwew=
-    token: 3Eek1dtrf8HupzN88S8Iig2kwKv0JwLaf6318716bbf9e0a52a9e9a1d4e42c67a19y_RgRjeyQAn2krQDgZS2Yl2nPwwlXl6HyvG-mLh9w44yl_yTBSilX-_Ih8aBUnPOscNnQYsAcfQiKdc5bK_zGQBVYSxQ6SXsmprxCilp9gUQ0q0B3_8r6HQE4zN6KGlKLWZF7eNkqSp26oktbp7TBzjufK_NUjIA7lgNRIIOqvb7PidiuB-pOoFBhODxjEVSAWaOvAReH2H46zmlemuQHSA55pulkOEPX6oDzgEx5Rdo_DU1IMKyWK_gvVKbDQPuI5aXFv6FgpAbvmsvXBS3OJaaJsPCOUlZLsIpFnCBDn4dqAuS5wTamczZGaGtpNQeXCzlG7fbap4wn3mug16v87Wq39TfxQNFYEGmQUFbpvST6zS-yYlzTfen24Hv7MaPWmfOMAWuOKPgTee-d_TJHFwknnYkiG1shmsrv3TCGSqg-s1bPUFvvdbPsCtf4h9RjUoG7QbDVneOUKR65wJke9Xv1CZYyHKD-KmUQiI3Dphw9zHy0SpWN78IQsVLDHx2hqEI_Do4T6C4SW8ptFL4USW1JAxZ55zOjIQ4c1Whk0JJsPal7SvkwfGvIpQuOQ
     regionName: ap-shanghai
     bucketName: neutron-1311154792
     filePrefix: https://neutron-1311154792.cos.ap-shanghai.myqcloud.com/
