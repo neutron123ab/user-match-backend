@@ -10,6 +10,7 @@ import lombok.Data;
 
 /**
  * 标签表
+ * @author zzs
  * @TableName tags
  */
 @TableName(value ="tags")

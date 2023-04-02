@@ -1,6 +1,7 @@
 package com.neutron.usermatchbackend.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -296,6 +297,43 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
                 lock.unlock();
             }
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean quitTeam(Long teamId, UserDTO loginUser) {
+        if(teamId == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR);
+        }
+        Long userId = loginUser.getId();
+        Team team = getById(teamId);
+        QueryWrapper<UserTeam> userTeamQueryWrapper = new QueryWrapper<>();
+        userTeamQueryWrapper.eq("user_id", userId).eq("team_id", teamId);
+        long count = userTeamService.count(userTeamQueryWrapper);
+        if(count == 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "该用户未加入队伍");
+        }
+        if(team.getMembersNum() == 1) {
+            removeById(teamId);
+        } else {
+            //如果当前用户是队长，则将队长移交给第二个加入队伍的用户
+            if(team.getCaptainId().equals(userId)) {
+                QueryWrapper<UserTeam> queryWrapper = new QueryWrapper<>();
+                queryWrapper.eq("team_id", teamId);
+                queryWrapper.orderByAsc("join_time").last("limit 2");
+                List<UserTeam> list = userTeamService.list(queryWrapper);
+                if(CollUtil.isEmpty(list) || list.size() <= 1) {
+                    throw new BusinessException(ErrorCode.SYSTEM_ERROR);
+                }
+                UserTeam userTeam = list.get(1);
+                team.setCaptainId(userTeam.getUserId());
+                boolean update = updateById(team);
+                if(!update) {
+                    throw new BusinessException(ErrorCode.SYSTEM_ERROR, "更新队长操作失败");
+                }
+            }
+        }
+        return userTeamService.remove(userTeamQueryWrapper);
     }
 }
 
