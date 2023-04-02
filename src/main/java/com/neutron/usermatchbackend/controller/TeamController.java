@@ -1,6 +1,7 @@
 package com.neutron.usermatchbackend.controller;
 
 import cn.hutool.core.bean.BeanUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.neutron.usermatchbackend.common.BaseResponse;
 import com.neutron.usermatchbackend.common.ErrorCode;
 import com.neutron.usermatchbackend.common.ResultUtils;
@@ -8,14 +9,22 @@ import com.neutron.usermatchbackend.exception.BusinessException;
 import com.neutron.usermatchbackend.model.dto.TeamDTO;
 import com.neutron.usermatchbackend.model.dto.UserDTO;
 import com.neutron.usermatchbackend.model.entity.Team;
+import com.neutron.usermatchbackend.model.entity.UserTeam;
 import com.neutron.usermatchbackend.model.request.TeamCreateRequest;
+import com.neutron.usermatchbackend.model.request.TeamQueryRequest;
 import com.neutron.usermatchbackend.model.request.TeamUpdateRequest;
+import com.neutron.usermatchbackend.model.vo.TeamUserVO;
 import com.neutron.usermatchbackend.service.TeamService;
+import com.neutron.usermatchbackend.service.UserTeamService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.neutron.usermatchbackend.constant.UserConstant.USER_LOGIN_STATE;
 
@@ -30,6 +39,9 @@ public class TeamController {
 
     @Resource
     private TeamService teamService;
+
+    @Resource
+    private UserTeamService userTeamService;
 
     @PostMapping("/create")
     public BaseResponse<Boolean> createTeam(@RequestBody TeamCreateRequest teamCreateRequest, HttpServletRequest request){
@@ -71,6 +83,30 @@ public class TeamController {
         TeamDTO teamDTO = new TeamDTO();
         BeanUtil.copyProperties(team, teamDTO);
         return ResultUtils.success(teamDTO);
+    }
+
+    @GetMapping("/list")
+    public BaseResponse<List<TeamUserVO>> getTeams(TeamQueryRequest teamQueryRequest, HttpServletRequest request){
+        if(teamQueryRequest == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR);
+        }
+        UserDTO loginUser = (UserDTO) request.getSession().getAttribute(USER_LOGIN_STATE);
+        List<TeamUserVO> teams = teamService.getTeams(teamQueryRequest);
+        //判断当前用户是否加入了队伍
+        QueryWrapper<UserTeam> userTeamQueryWrapper = new QueryWrapper<>();
+        List<Long> teamIdList = teams.stream().map(TeamUserVO::getId).collect(Collectors.toList());
+        userTeamQueryWrapper.eq("user_id", loginUser.getId());
+        userTeamQueryWrapper.in("team_id", teamIdList);
+        //得到该用户-队伍关联集合
+        List<UserTeam> list = userTeamService.list(userTeamQueryWrapper);
+        //得到已计入队伍的id集合
+        Set<Long> idSet = list.stream().map(UserTeam::getTeamId).collect(Collectors.toSet());
+        teams.forEach(team -> {
+            boolean contains = idSet.contains(team.getId());
+            team.setHasJoin(contains);
+        });
+
+        return ResultUtils.success(teams);
     }
 
 

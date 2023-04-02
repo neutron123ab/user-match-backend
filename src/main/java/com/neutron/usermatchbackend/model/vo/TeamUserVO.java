@@ -61,11 +61,6 @@ public class TeamUserVO implements Serializable {
     private Integer membersNum;
 
     /**
-     * 用户id
-     */
-    private Long userId;
-
-    /**
      * 创建人信息
      */
     private UserVO createUser;

@@ -8,21 +8,27 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.neutron.usermatchbackend.common.ErrorCode;
 import com.neutron.usermatchbackend.enums.TeamStatusEnum;
 import com.neutron.usermatchbackend.exception.BusinessException;
-import com.neutron.usermatchbackend.model.dto.TeamDTO;
 import com.neutron.usermatchbackend.model.dto.UserDTO;
 import com.neutron.usermatchbackend.model.entity.Team;
+import com.neutron.usermatchbackend.model.entity.User;
 import com.neutron.usermatchbackend.model.entity.UserTeam;
 import com.neutron.usermatchbackend.model.request.TeamCreateRequest;
+import com.neutron.usermatchbackend.model.request.TeamQueryRequest;
 import com.neutron.usermatchbackend.model.request.TeamUpdateRequest;
+import com.neutron.usermatchbackend.model.vo.TeamUserVO;
+import com.neutron.usermatchbackend.model.vo.UserVO;
 import com.neutron.usermatchbackend.service.TeamService;
 import com.neutron.usermatchbackend.mapper.TeamMapper;
+import com.neutron.usermatchbackend.service.UserService;
 import com.neutron.usermatchbackend.service.UserTeamService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import static com.neutron.usermatchbackend.constant.TeamConstant.*;
 
@@ -37,6 +43,9 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
 
     @Resource
     private UserTeamService userTeamService;
+
+    @Resource
+    private UserService userService;
 
     private static final String SALT = "team";
 
@@ -135,6 +144,77 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             throw new BusinessException(ErrorCode.SYSTEM_ERROR);
         }
         return true;
+    }
+
+    @Override
+    public List<TeamUserVO> getTeams(TeamQueryRequest teamQueryRequest) {
+        if(teamQueryRequest == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR);
+        }
+        QueryWrapper<Team> teamQueryWrapper = new QueryWrapper<>();
+
+        //组合查询条件
+        //根据id查找队伍
+        Long id = teamQueryRequest.getId();
+        if(id != null && id > 0) {
+            teamQueryWrapper.eq("id", id);
+        }
+        //根据队名查找队伍
+        String teamName = teamQueryRequest.getTeamName();
+        if(StrUtil.isNotBlank(teamName)) {
+            teamQueryWrapper.like("team_name", teamName);
+        }
+        //根据队伍描述查找用户
+        String teamDescription = teamQueryRequest.getTeamDescription();
+        if(StrUtil.isNotBlank(teamDescription)) {
+            teamQueryWrapper.like("team_description", teamDescription);
+        }
+        //根据队伍状态查找用户
+        Integer teamStatus = teamQueryRequest.getTeamStatus();
+        TeamStatusEnum enumByValue = TeamStatusEnum.getEnumByValue(teamStatus);
+        if(enumByValue == null) {
+            enumByValue = TeamStatusEnum.PUBLIC;
+        }
+        //当查找的是私有队伍时直接报错
+        if(enumByValue.equals(TeamStatusEnum.PRIVATE)) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        teamQueryWrapper.eq("team_status", enumByValue.getValue());
+        //根据队长id查找队伍
+        Long captainId = teamQueryRequest.getCaptainId();
+        if(captainId != null && captainId > 0) {
+            teamQueryWrapper.eq("captain_id", captainId);
+        }
+        //根据队伍最大人数查找队伍
+        Integer maxNum = teamQueryRequest.getMaxNum();
+        if(maxNum != null && maxNum > 0) {
+            teamQueryWrapper.eq("max_num", maxNum);
+        }
+        //组合条件查询结束
+        //去除掉已过期的队伍
+        //当过期时间在当前时间之后或者过期时间为空时才找出数据
+        teamQueryWrapper.and(qw -> qw.gt("expire_time", new Date()).or().isNull("expire_time"));
+
+        List<Team> teamList = list(teamQueryWrapper);
+        ArrayList<TeamUserVO> resultList = new ArrayList<>();
+        //查找创建人的信息
+        for (Team team : teamList) {
+            Long teamCaptainId = team.getCaptainId();
+            if(teamCaptainId == null) {
+                continue;
+            }
+            User captain = userService.getById(teamCaptainId);
+            TeamUserVO teamUserVO = new TeamUserVO();
+            BeanUtil.copyProperties(team, teamUserVO);
+            //用户信息脱敏
+            if(captain != null) {
+                UserVO userVO = new UserVO();
+                BeanUtil.copyProperties(captain, userVO);
+                teamUserVO.setCreateUser(userVO);
+            }
+            resultList.add(teamUserVO);
+        }
+        return resultList;
     }
 }
 
