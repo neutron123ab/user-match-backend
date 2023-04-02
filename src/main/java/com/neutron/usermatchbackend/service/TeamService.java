@@ -6,6 +6,7 @@ import com.neutron.usermatchbackend.model.entity.Team;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.neutron.usermatchbackend.model.entity.User;
 import com.neutron.usermatchbackend.model.request.TeamCreateRequest;
+import com.neutron.usermatchbackend.model.request.TeamJoinRequest;
 import com.neutron.usermatchbackend.model.request.TeamQueryRequest;
 import com.neutron.usermatchbackend.model.request.TeamUpdateRequest;
 import com.neutron.usermatchbackend.model.vo.TeamUserVO;
@@ -43,5 +44,14 @@ public interface TeamService extends IService<Team> {
      * @return 搜索结果
      */
     List<TeamUserVO> getTeams(TeamQueryRequest teamQueryRequest);
+
+    /**
+     * 当前登录用户加入队伍
+     *
+     * @param teamJoinRequest 加入队伍请求（队伍id，密码）
+     * @param loginUser 当前登录用户
+     * @return 是否加入成功
+     */
+    boolean joinTeam(TeamJoinRequest teamJoinRequest, UserDTO loginUser);
 
 }

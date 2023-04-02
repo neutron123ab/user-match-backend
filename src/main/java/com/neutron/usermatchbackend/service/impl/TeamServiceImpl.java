@@ -13,6 +13,7 @@ import com.neutron.usermatchbackend.model.entity.Team;
 import com.neutron.usermatchbackend.model.entity.User;
 import com.neutron.usermatchbackend.model.entity.UserTeam;
 import com.neutron.usermatchbackend.model.request.TeamCreateRequest;
+import com.neutron.usermatchbackend.model.request.TeamJoinRequest;
 import com.neutron.usermatchbackend.model.request.TeamQueryRequest;
 import com.neutron.usermatchbackend.model.request.TeamUpdateRequest;
 import com.neutron.usermatchbackend.model.vo.TeamUserVO;
@@ -21,7 +22,8 @@ import com.neutron.usermatchbackend.service.TeamService;
 import com.neutron.usermatchbackend.mapper.TeamMapper;
 import com.neutron.usermatchbackend.service.UserService;
 import com.neutron.usermatchbackend.service.UserTeamService;
-import org.springframework.context.annotation.Bean;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,7 @@ import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static com.neutron.usermatchbackend.constant.TeamConstant.*;
 
@@ -46,6 +49,9 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private RedissonClient redissonClient;
 
     private static final String SALT = "team";
 
@@ -216,7 +222,84 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         }
         return resultList;
     }
+
+    @Override
+    public boolean joinTeam(TeamJoinRequest teamJoinRequest, UserDTO loginUser) {
+
+        if(BeanUtil.hasNullField(teamJoinRequest)) {
+            throw new BusinessException(ErrorCode.NULL_ERROR);
+        }
+        if(loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
+        }
+
+        Long teamId = teamJoinRequest.getTeamId();
+        String password = teamJoinRequest.getPassword();
+        Team team = getById(teamId);
+        Date expireTime = team.getExpireTime();
+        if(expireTime.before(new Date())) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "当前队伍已过期");
+        }
+        Integer teamStatus = team.getTeamStatus();
+        TeamStatusEnum enumByValue = TeamStatusEnum.getEnumByValue(teamStatus);
+        if(enumByValue.equals(TeamStatusEnum.PRIVATE)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "禁止加入私有队伍");
+        }
+        if(enumByValue.equals(TeamStatusEnum.SECRET)) {
+            if(password == null) {
+                throw new BusinessException(ErrorCode.NULL_ERROR);
+            }
+            String encryptPassword = SecureUtil.md5(password + SALT);
+            if(!encryptPassword.equals(team.getTeamPassword())) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码错误");
+            }
+        }
+
+        Long userId = loginUser.getId();
+        RLock lock = redissonClient.getLock("user:match:join_team");
+        try {
+            while(true) {
+                //获取锁成功
+                if(lock.tryLock(0, TimeUnit.SECONDS)) {
+                    QueryWrapper<UserTeam> userTeamQueryWrapper = new QueryWrapper<>();
+                    userTeamQueryWrapper.eq("user_id", userId);
+                    long count = userTeamService.count(userTeamQueryWrapper);
+                    if(count > 5) {
+                        throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户最多加入5个队伍");
+                    }
+                    userTeamQueryWrapper = new QueryWrapper<>();
+                    userTeamQueryWrapper.eq("user_id", userId).eq("team_id", teamId);
+                    long userJoinedNum = userTeamService.count(userTeamQueryWrapper);
+                    if (userJoinedNum > 0) {
+                        throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户已加入了该队伍");
+                    }
+                    Integer membersNum = team.getMembersNum();
+                    if(membersNum >= team.getMaxNum()) {
+                        throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍已满");
+                    }
+                    //用户加入队伍
+                    UserTeam userTeam = new UserTeam();
+                    userTeam.setUserId(userId);
+                    userTeam.setTeamId(teamId);
+                    boolean save = userTeamService.save(userTeam);
+                    if(!save) {
+                        throw new BusinessException(ErrorCode.SYSTEM_ERROR, "加入队伍失败");
+                    }
+                    team.setMembersNum(++membersNum);
+                    return updateById(team);
+                }
+            }
+        } catch (InterruptedException e) {
+            return false;
+        } finally {
+            if(lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
+    }
 }
+
+
 
 
 

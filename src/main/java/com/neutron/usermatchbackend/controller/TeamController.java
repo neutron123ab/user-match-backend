@@ -11,12 +11,14 @@ import com.neutron.usermatchbackend.model.dto.UserDTO;
 import com.neutron.usermatchbackend.model.entity.Team;
 import com.neutron.usermatchbackend.model.entity.UserTeam;
 import com.neutron.usermatchbackend.model.request.TeamCreateRequest;
+import com.neutron.usermatchbackend.model.request.TeamJoinRequest;
 import com.neutron.usermatchbackend.model.request.TeamQueryRequest;
 import com.neutron.usermatchbackend.model.request.TeamUpdateRequest;
 import com.neutron.usermatchbackend.model.vo.TeamUserVO;
 import com.neutron.usermatchbackend.service.TeamService;
 import com.neutron.usermatchbackend.service.UserTeamService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Bean;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -109,6 +111,14 @@ public class TeamController {
         return ResultUtils.success(teams);
     }
 
-
+    @PostMapping("/join")
+    public BaseResponse<Boolean> joinTeam(@RequestBody TeamJoinRequest teamJoinRequest, HttpServletRequest request){
+        if(BeanUtil.hasNullField(teamJoinRequest)) {
+            throw new BusinessException(ErrorCode.NULL_ERROR);
+        }
+        UserDTO loginUser = (UserDTO) request.getSession().getAttribute(USER_LOGIN_STATE);
+        boolean flag = teamService.joinTeam(teamJoinRequest, loginUser);
+        return ResultUtils.success(flag);
+    }
 
 }
