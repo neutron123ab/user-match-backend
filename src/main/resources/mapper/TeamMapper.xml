@@ -15,12 +15,14 @@
             <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
             <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
             <result property="isDelete" column="is_delete" jdbcType="INTEGER"/>
+            <result property="maxNum" column="max_num" jdbcType="INTEGER"/>
+            <result property="membersNum" column="members_num" jdbcType="INTEGER"/>
     </resultMap>
 
     <sql id="Base_Column_List">
         id,team_name,team_description,
         expire_time,captain_id,team_status,
         team_password,create_time,update_time,
-        is_delete
+        is_delete,max_num,members_num
     </sql>
 </mapper>

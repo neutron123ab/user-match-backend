@@ -1,25 +1,22 @@
-package com.neutron.usermatchbackend.model.entity;
-
-import com.baomidou.mybatisplus.annotation.*;
-
-import java.io.Serializable;
-import java.util.Date;
+package com.neutron.usermatchbackend.model.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
+import java.io.Serializable;
+import java.util.Date;
+
 /**
- * 队伍
  * @author zzs
- * @TableName team
+ * @date 2023/4/2 15:46
  */
-@TableName(value ="team")
 @Data
-public class Team implements Serializable {
+public class TeamQueryRequest implements Serializable {
+    private static final long serialVersionUID = 6663849142047924514L;
+
     /**
-     * 
+     * 队伍id
      */
-    @TableId(type = IdType.AUTO)
     private Long id;
 
     /**
@@ -48,26 +45,10 @@ public class Team implements Serializable {
     private Integer teamStatus;
 
     /**
-     * 入队密码
-     */
-    private String teamPassword;
-
-    /**
      * 创建时间
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
-
-    /**
-     * 更新时间
-     */
-    private Date updateTime;
-
-    /**
-     * 是否删除（逻辑删除）
-     */
-    @TableLogic
-    private Integer isDelete;
 
     /**
      * 队伍最大人数
@@ -78,7 +59,4 @@ public class Team implements Serializable {
      * 队伍当前人数
      */
     private Integer membersNum;
-
-    @TableField(exist = false)
-    private static final long serialVersionUID = 1L;
 }
