@@ -121,4 +121,27 @@ public class TeamController {
         return ResultUtils.success(flag);
     }
 
+    @PostMapping("/quit")
+    public BaseResponse<Boolean> quitTeam(@RequestBody Long teamId, HttpServletRequest request) {
+        if (teamId == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR);
+        }
+        UserDTO loginUser = (UserDTO) request.getSession().getAttribute(USER_LOGIN_STATE);
+        boolean flag = teamService.quitTeam(teamId, loginUser);
+        return ResultUtils.success(flag);
+    }
+
+    @PostMapping("/delete")
+    public BaseResponse<Boolean> deleteTeam(@RequestBody Long teamId, HttpServletRequest request) {
+        if(teamId == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR);
+        }
+        UserDTO loginUser = (UserDTO) request.getSession().getAttribute(USER_LOGIN_STATE);
+        boolean flag = teamService.deleteTeam(teamId, loginUser);
+        if(!flag) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "删除失败");
+        }
+        return ResultUtils.success(true);
+    }
+
 }

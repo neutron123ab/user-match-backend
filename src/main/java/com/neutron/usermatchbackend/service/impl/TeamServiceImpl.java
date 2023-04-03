@@ -225,6 +225,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean joinTeam(TeamJoinRequest teamJoinRequest, UserDTO loginUser) {
 
         if(BeanUtil.hasNullField(teamJoinRequest)) {
@@ -313,6 +314,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         if(count == 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "该用户未加入队伍");
         }
+        //如果队伍中只有一个人，则直接移除队伍
         if(team.getMembersNum() == 1) {
             removeById(teamId);
         } else {
@@ -334,6 +336,26 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             }
         }
         return userTeamService.remove(userTeamQueryWrapper);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteTeam(Long teamId, UserDTO loginUser) {
+        if(teamId == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR);
+        }
+        Team team = getById(teamId);
+        Long userId = loginUser.getId();
+        if(!team.getCaptainId().equals(userId)) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "只有队长能删除队伍");
+        }
+        QueryWrapper<UserTeam> userTeamQueryWrapper = new QueryWrapper<>();
+        userTeamQueryWrapper.eq("team_id", teamId);
+        boolean remove = userTeamService.remove(userTeamQueryWrapper);
+        if(!remove) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "删除失败");
+        }
+        return removeById(teamId);
     }
 }
 
