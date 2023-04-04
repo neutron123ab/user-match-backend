@@ -133,9 +133,13 @@ public class TeamController {
     }
 
     @PostMapping("/delete")
-    public BaseResponse<Boolean> deleteTeam(@RequestBody Long teamId, HttpServletRequest request) {
-        if(teamId == null) {
+    public BaseResponse<Boolean> deleteTeam(@RequestBody TeamQuitRequest teamDeleteRequest, HttpServletRequest request) {
+        if(teamDeleteRequest == null) {
             throw new BusinessException(ErrorCode.NULL_ERROR);
+        }
+        long teamId = teamDeleteRequest.getTeamId();
+        if(teamId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         UserDTO loginUser = (UserDTO) request.getSession().getAttribute(USER_LOGIN_STATE);
         boolean flag = teamService.deleteTeam(teamId, loginUser);
