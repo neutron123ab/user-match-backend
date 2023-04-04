@@ -1,5 +1,6 @@
 package com.neutron.usermatchbackend.model.request;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -27,6 +28,7 @@ public class TeamCreateRequest implements Serializable {
     /**
      * 过期时间
      */
+    @JsonFormat(pattern = "yyyy/MM/dd")
     private Date expireTime;
 
     /**

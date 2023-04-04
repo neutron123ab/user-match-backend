@@ -10,10 +10,7 @@ import com.neutron.usermatchbackend.model.dto.TeamDTO;
 import com.neutron.usermatchbackend.model.dto.UserDTO;
 import com.neutron.usermatchbackend.model.entity.Team;
 import com.neutron.usermatchbackend.model.entity.UserTeam;
-import com.neutron.usermatchbackend.model.request.TeamCreateRequest;
-import com.neutron.usermatchbackend.model.request.TeamJoinRequest;
-import com.neutron.usermatchbackend.model.request.TeamQueryRequest;
-import com.neutron.usermatchbackend.model.request.TeamUpdateRequest;
+import com.neutron.usermatchbackend.model.request.*;
 import com.neutron.usermatchbackend.model.vo.TeamUserVO;
 import com.neutron.usermatchbackend.service.TeamService;
 import com.neutron.usermatchbackend.service.UserTeamService;
@@ -122,9 +119,13 @@ public class TeamController {
     }
 
     @PostMapping("/quit")
-    public BaseResponse<Boolean> quitTeam(@RequestBody Long teamId, HttpServletRequest request) {
-        if (teamId == null) {
+    public BaseResponse<Boolean> quitTeam(@RequestBody TeamQuitRequest teamQuitRequest, HttpServletRequest request) {
+        if (teamQuitRequest == null) {
             throw new BusinessException(ErrorCode.NULL_ERROR);
+        }
+        long teamId = teamQuitRequest.getTeamId();
+        if(teamId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         UserDTO loginUser = (UserDTO) request.getSession().getAttribute(USER_LOGIN_STATE);
         boolean flag = teamService.quitTeam(teamId, loginUser);

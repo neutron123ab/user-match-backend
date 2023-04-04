@@ -334,6 +334,13 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
                     throw new BusinessException(ErrorCode.SYSTEM_ERROR, "更新队长操作失败");
                 }
             }
+            //将队伍总人数减一
+            Integer membersNum = team.getMembersNum();
+            team.setMembersNum(--membersNum);
+            boolean update = updateById(team);
+            if(!update) {
+                throw new BusinessException(ErrorCode.SYSTEM_ERROR, "更新队伍人数失败");
+            }
         }
         return userTeamService.remove(userTeamQueryWrapper);
     }
