@@ -33,6 +33,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         ignorePath.add("/static/**");
         ignorePath.add("/templates/**");
         ignorePath.add("/error");
+        ignorePath.add("/chat/jinDuTiao");
         registry.addInterceptor(loginInterceptor).addPathPatterns("/**")
                 .excludePathPatterns("/user/login", "/user/register", "/user/logout")
                 .excludePathPatterns(ignorePath);
