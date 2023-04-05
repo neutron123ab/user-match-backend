@@ -72,47 +72,46 @@ public class WebSocketUtil {
     @OnMessage
     public void onMessage(String message) {
         ChatInfo chatInfo = ConvertMsgUtil.getChatInfo(message);
-        Long toUserId = chatInfo.getToUserId();
-        String chatMessage = chatInfo.getMessage();
         int typeValue = chatInfo.getType();
         MsgStatusEnum enumByValue = MsgStatusEnum.getEnumByValue(typeValue);
 
         //私聊
         if (enumByValue.equals(MsgStatusEnum.SINGLE)) {
-            sendMessageSingle(toUserId, chatMessage);
+            sendMessageSingle(chatInfo);
         }
         //群聊
         if (enumByValue.equals(MsgStatusEnum.GROUP)) {
-            sendMessageGroup(toUserId, chatMessage);
+            sendMessageGroup(chatInfo);
         }
         //系统消息
         if (enumByValue.equals(MsgStatusEnum.SYSTEM)) {
-            sendMessageToAll(chatMessage);
+            sendMessageToAll(chatInfo);
         }
     }
 
     /**
      * 发送消息方法
      */
-    public void sendMessageSingle(Long toUserId, String message) {
+    public void sendMessageSingle(ChatInfo chatInfo) {
+        Long toUserId = chatInfo.getToUserId();
         WebSocketUtil webSocketUtil = webSocketMap.get(toUserId);
         try {
-            webSocketUtil.session.getBasicRemote().sendText(message);
+            webSocketUtil.session.getBasicRemote().sendText(ConvertMsgUtil.convertInfoToJson(chatInfo));
         } catch (IOException e) {
             e.printStackTrace();
         }
-        log.info("[{} 向 {} 发送消息] 内容：{}", userId, toUserId, message);
+        log.info("[{} 向 {} 发送消息] 内容：{}", userId, toUserId, chatInfo.getMessage());
     }
 
     /**
      * 用户向所在群聊发送消息
      *
-     * @param teamId 队伍id
-     * @param message 消息内容
+     * @param chatInfo 消息内容
      */
-    public void sendMessageGroup(Long teamId, String message) {
+    public void sendMessageGroup(ChatInfo chatInfo) {
         Set<Map.Entry<Long, WebSocketUtil>> entries = webSocketMap.entrySet();
-
+        Long teamId = chatInfo.getToUserId();
+        String message = chatInfo.getMessage();
         //根据teamId取出所有同一组的用户session
         QueryWrapper<UserTeam> userTeamQueryWrapper = new QueryWrapper<>();
         userTeamQueryWrapper.eq("team_id", teamId);
@@ -130,7 +129,7 @@ public class WebSocketUtil {
             }
             if (userIdList.contains(key)) {
                 try {
-                    value.session.getBasicRemote().sendText(message);
+                    value.session.getBasicRemote().sendText(ConvertMsgUtil.convertInfoToJson(chatInfo));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -142,15 +141,16 @@ public class WebSocketUtil {
     /**
      * 系统向所有人发送消息
      *
-     * @param message 消息内容
+     * @param chatInfo 消息内容
      */
-    public static void sendMessageToAll(String message) {
+    public static void sendMessageToAll(ChatInfo chatInfo) {
+        String message = chatInfo.getMessage();
         Set<Map.Entry<Long, WebSocketUtil>> entries = webSocketMap.entrySet();
         for (Map.Entry<Long, WebSocketUtil> entry : entries) {
             log.info("[连接ID: {}][系统消息] 内容：{}", entry.getKey(), message);
             WebSocketUtil value = entry.getValue();
             try {
-                value.session.getBasicRemote().sendText(message);
+                value.session.getBasicRemote().sendText(ConvertMsgUtil.convertInfoToJson(chatInfo));
             } catch (IOException e) {
                 e.printStackTrace();
             }

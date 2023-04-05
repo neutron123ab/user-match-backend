@@ -36,7 +36,3 @@ mybatis-plus:
         log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
     type-handlers-package: com.neutron.usermatchbackend.handler
 
-cos:
-    regionName: ap-shanghai
-    bucketName: neutron-1311154792
-    filePrefix: https://neutron-1311154792.cos.ap-shanghai.myqcloud.com/

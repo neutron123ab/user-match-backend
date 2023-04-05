@@ -4,6 +4,8 @@ import com.neutron.usermatchbackend.model.dto.TmpSecret;
 import com.tencent.cloud.CosStsClient;
 import com.tencent.cloud.Response;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +20,12 @@ import java.util.TreeMap;
 @Component
 public class TmpSecretIdKeyJob {
 
+    @Value("${cos.secretId}")
+    private String secretId;
+
+    @Value("${cos.secretKey}")
+    private String secretKey;
+
     @Resource
     private TmpSecret tmpSecret;
 
@@ -27,8 +35,6 @@ public class TmpSecretIdKeyJob {
 
         try {
             //这里的 SecretId 和 SecretKey 代表了用于申请临时密钥的永久身份（主账号、子账号等），子账号需要具有操作存储桶的权限。
-            String secretId = "AKIDTmmaATI4tZCoNpOrZG1GNJ6g5UuA1gMy";
-            String secretKey ="wkYGwX2Ogms052669BnIdtyxpX5JQL4b";
             // 替换为您的云 api 密钥 SecretId
             config.put("secretId", secretId);
             // 替换为您的云 api 密钥 SecretKey
